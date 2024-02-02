@@ -3,6 +3,7 @@ import json
 import numpy as np 
 import networkx as nx
 import matplotlib.pyplot as plt
+import geopandas as gpd
 
 Destinataires =  {'SOGARIS' : (2.36815, 48.74991),
                   'Mines Paris' : (2.33969, 48.84563),
@@ -79,9 +80,12 @@ dureetot = 0
 for i in range(len(result[0])-1):
     dureetot+=requests.get(f"https://wxs.ign.fr/essentiels/geoportail/itineraire/rest/1.0.0/route?resource=bdtopo-osrm&start={Destinataires[cles[result[0][i]]][0]},{Destinataires[cles[result[0][i]]][1]}&end={Destinataires[cles[result[0][i+1]]][0]},{Destinataires[cles[result[0][i+1]]][1]}").json()['duration']
 
-
 Energyconsumed = 0.3*dureetot*PWa + 0.7*dureetot*PW
 print(Energyconsumed)
 
+plt.figure()
+G=nx.DiGraph(DISTANCE)
 
+nx.draw(G)
 
+plt.show()
