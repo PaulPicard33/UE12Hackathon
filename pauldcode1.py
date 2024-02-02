@@ -26,7 +26,6 @@ def clarke_and_wright(distance_matrix, capacity):
 
     # Initialisation des itinéraires
     routes = [[0, i, 0] for i in range(1, num_customers + 1)]
-
     # Construction des itinéraires
     for edge in edges_sorted:
         i, j, distance = edge
@@ -45,8 +44,9 @@ def clarke_and_wright(distance_matrix, capacity):
 
 cles = list(Destinataires.keys())
 num_destinataires = len(cles)
-M = np.zeros((num_destinataires, num_destinataires))  # Créez une matrice remplie de zéros
-
+DISTANCE = np.zeros((num_destinataires, num_destinataires))  # Créez une matrice remplie de zéros
+DUREE= np.zeros((num_destinataires, num_destinataires)) 
+Energy = 0
 for i in range(num_destinataires):
     for j in range(num_destinataires):
         if i != j:  # Évitez de calculer la distance entre un point et lui-même
@@ -56,20 +56,32 @@ for i in range(num_destinataires):
             # Utilisez requests.get pour obtenir les informations de l'itinéraire et extrayez la distance
             distance = requests.get(f"https://wxs.ign.fr/essentiels/geoportail/itineraire/rest/1.0.0/route?resource=bdtopo-osrm&start={start_coords[0]},{start_coords[1]}&end={end_coords[0]},{end_coords[1]}").json()['distance']
             duree = requests.get(f"https://wxs.ign.fr/essentiels/geoportail/itineraire/rest/1.0.0/route?resource=bdtopo-osrm&start={start_coords[0]},{start_coords[1]}&end={end_coords[0]},{end_coords[1]}").json()['duration']
-            M[i][j] = distance
+            DISTANCE[i][j] = distance
+            DUREE[i][j] = duree
+
 
 
 capacity=float(8)
 
 acceleration = 1.85 #m/s**2
-vitesse = 40/3.6
+vitesse = 40/3.6 #m/s
 Area=4.56
 k1=2.15e-3
 Cx=0.46e-3
 rhoair = 1
 M = 3.5e3
 g=9.81
-PW=vitesse*(0.5*rhoair*vitesse**2*Cx*Area+)
-result = clarke_and_wright(M,capacity)
+PW=vitesse*(0.5*rhoair*vitesse**2*Cx*Area+M*g*(k1+k1*vitesse**2))*(1/0.3)
+PWa=(vitesse/2)*(0.5*rhoair*(vitesse/2)**2*Cx*Area+M*g*(k1+k1*(vitesse/2)**2)+M*acceleration)*(1/0.3)
+result = clarke_and_wright(DISTANCE,capacity)
 print(result)
+dureetot = 0
+for i in range(len(result[0])-1):
+    dureetot+=requests.get(f"https://wxs.ign.fr/essentiels/geoportail/itineraire/rest/1.0.0/route?resource=bdtopo-osrm&start={Destinataires[cles[result[0][i]]][0]},{Destinataires[cles[result[0][i]]][1]}&end={Destinataires[cles[result[0][i+1]]][0]},{Destinataires[cles[result[0][i+1]]][1]}").json()['duration']
+
+
+Energyconsumed = 0.3*dureetot*PWa + 0.7*dureetot*PW
+print(Energyconsumed)
+
+
 
