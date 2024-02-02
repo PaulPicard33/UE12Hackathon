@@ -1,28 +1,75 @@
 import requests
 import json
 import numpy as np 
+import networkx as nx
+import matplotlib.pyplot as plt
+
 Destinataires =  {'SOGARIS' : (2.36815, 48.74991),
                   'Mines Paris' : (2.33969, 48.84563),
 'Observatoire de Paris' : (2.33650, 48.83730),
 'Marie du 14e' : (2.32698, 48.83320),
 'Gare Montparnasse TGV' : (2.32159, 48.84117),
 'Mairie du 15e' : (2.29991, 48.84126)}
-(lng_origine, lat_origine) = (2.34017, 48.84635)
-(lng_destination, lat_destination) = (2.35036, 48.8413)
-try:
-    r =requests.get(f"https://wxs.ign.fr/essentiels/geoportail/itineraire/rest/1.0.0/route?resource=bdtopo-osrm&start={lng_origine},{lat_origine}&end={lng_destination},{lat_destination}").json()  
-    print(f"Distance : {r['distance']} mètres, Durée :{r['duration']} minutes")
-    
-except Exception:
-    print(f'erreur requete !')
-durée = 0
-distance = 0
 
-cles=[Destinataires.keys()]
-M = np.shape(len(cles))
-for i in range(len(cles)):
-    for j in range(len(cles)):
-        M[i][j]=requests.get(f"https://wxs.ign.fr/essentiels/geoportail/itineraire/rest/1.0.0/route?resource=bdtopo-osrm&start={Destinataires[cles[i]][0]},{Destinataires[cles[i]][1]}&end={Destinataires[cles[j]][0]},{Destinataires[cles[j]][1]}").json()['distance']
-print(M)
 
+def clarke_and_wright(distance_matrix, capacity):
+    num_customers = len(distance_matrix) - 1  # Nombre de clients
+    G = nx.complete_graph(num_customers + 1)  # Graphe complet avec le dépôt et les clients
+
+    # Attribution des distances aux arêtes du graphe
+    for i in range(num_customers + 1):
+        for j in range(i + 1, num_customers + 1):
+            G[i][j]['distance'] = distance_matrix[i][j]
+
+    # Tri des arêtes par distance décroissante
+    edges_sorted = sorted(G.edges(data=True), key=lambda x: x[2]['distance'], reverse=True)
+
+    # Initialisation des itinéraires
+    routes = [[0, i, 0] for i in range(1, num_customers + 1)]
+
+    # Construction des itinéraires
+    for edge in edges_sorted:
+        i, j, distance = edge
+        for route in routes:
+            if i in route and j not in route and route[-1] == 0:
+                idx_i = route.index(i)
+                route.insert(idx_i + 1, j)
+                break
+            elif j in route and i not in route and route[1] == 0:
+                idx_j = route.index(j)
+                route.insert(idx_j, i)
+                break
+
+    return routes
+
+
+cles = list(Destinataires.keys())
+num_destinataires = len(cles)
+M = np.zeros((num_destinataires, num_destinataires))  # Créez une matrice remplie de zéros
+
+for i in range(num_destinataires):
+    for j in range(num_destinataires):
+        if i != j:  # Évitez de calculer la distance entre un point et lui-même
+            start_coords = Destinataires[cles[i]]
+            end_coords = Destinataires[cles[j]]
+            
+            # Utilisez requests.get pour obtenir les informations de l'itinéraire et extrayez la distance
+            distance = requests.get(f"https://wxs.ign.fr/essentiels/geoportail/itineraire/rest/1.0.0/route?resource=bdtopo-osrm&start={start_coords[0]},{start_coords[1]}&end={end_coords[0]},{end_coords[1]}").json()['distance']
+            duree = requests.get(f"https://wxs.ign.fr/essentiels/geoportail/itineraire/rest/1.0.0/route?resource=bdtopo-osrm&start={start_coords[0]},{start_coords[1]}&end={end_coords[0]},{end_coords[1]}").json()['duration']
+            M[i][j] = distance
+
+
+capacity=float(8)
+
+acceleration = 1.85 #m/s**2
+vitesse = 40/3.6
+Area=4.56
+k1=2.15e-3
+Cx=0.46e-3
+rhoair = 1
+M = 3.5e3
+g=9.81
+PW=vitesse*(0.5*rhoair*vitesse**2*Cx*Area+)
+result = clarke_and_wright(M,capacity)
+print(result)
 
